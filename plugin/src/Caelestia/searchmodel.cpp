@@ -52,6 +52,7 @@ SearchModel::SearchModel(QObject* parent)
     , m_model(new InternalSearchModel(this))
     , m_scorer("")
     , m_watcher(nullptr) {
+    setDynamicSortFilter(true);
     setSourceModel(m_model);
     m_keys << "name";
     calculateScores();
@@ -188,7 +189,7 @@ bool SearchModel::lessThan(const QModelIndex& left, const QModelIndex& right) co
         }
     }
 
-    return false;
+    return left.row() < right.row();
 }
 
 bool SearchModel::filterAcceptsRow(int sourceRow, const QModelIndex& parent) const {
@@ -270,9 +271,11 @@ void SearchModel::calculateScores() {
     m_watcher = new QFutureWatcher<ScoreMap>(this);
 
     connect(m_watcher, &QFutureWatcher<ScoreMap>::finished, this, [this]() {
-        m_scores = m_watcher->result();
-        sort(0, Qt::DescendingOrder);
-        invalidate();
+        if (m_watcher->future().isResultReadyAt(0)) {
+            m_scores = m_watcher->result();
+            sort(0, Qt::DescendingOrder);
+            invalidate();
+        }
         m_watcher->deleteLater();
         m_watcher = nullptr;
     });
