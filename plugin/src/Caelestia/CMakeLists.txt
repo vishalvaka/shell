@@ -1,4 +1,5 @@
 find_package(Qt6 REQUIRED COMPONENTS Core Qml Gui Concurrent Sql)
+find_package(rapidfuzz REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(Qalculate IMPORTED_TARGET libqalculate REQUIRED)
 pkg_check_modules(Pipewire IMPORTED_TARGET libpipewire-0.3 REQUIRED)
@@ -10,6 +11,7 @@ qt_standard_project_setup(REQUIRES 6.9)
 
 qt_add_qml_module(caelestia
     URI Caelestia
+    VERSION ${VERSION}
     SOURCES
         cutils.hpp cutils.cpp
         cachingimagemanager.hpp cachingimagemanager.cpp
@@ -22,6 +24,7 @@ qt_add_qml_module(caelestia
         audioprovider.hpp audioprovider.cpp
         cavaprovider.hpp cavaprovider.cpp
         appdb.hpp appdb.cpp
+        searchmodel.hpp searchmodel.cpp
 )
 
 qt_query_qml_module(caelestia
@@ -47,6 +50,7 @@ target_link_libraries(caelestia PRIVATE
     Qt::Gui
     Qt::Concurrent
     Qt::Sql
+    rapidfuzz::rapidfuzz
     PkgConfig::Qalculate
     PkgConfig::Pipewire
     PkgConfig::Aubio
