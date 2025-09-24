@@ -27,6 +27,8 @@ signals:
     void optionsChanged();
 
 private:
+    using SocketPtr = QSharedPointer<QLocalSocket>;
+
     QString m_requestSocket;
     QString m_eventSocket;
     QLocalSocket* m_socket;
@@ -34,14 +36,14 @@ private:
     QVariantHash m_options;
     HyprDevices* const m_devices;
 
-    bool refreshingOptions;
-    bool refreshingDevices;
+    SocketPtr m_optionsRefresh;
+    SocketPtr m_devicesRefresh;
 
     void readEvent();
     void handleEvent(const QString& event);
 
-    void makeRequestJson(const QString& request, const std::function<void(QJsonDocument)> callback);
-    void makeRequest(const QString& request, const std::function<void(QByteArray)> callback);
+    SocketPtr makeRequestJson(const QString& request, const std::function<void(bool, QJsonDocument)>& callback);
+    SocketPtr makeRequest(const QString& request, const std::function<void(bool, QByteArray)>& callback);
 };
 
 } // namespace caelestia::internal::hypr

@@ -51,7 +51,16 @@ HyprDevices* HyprExtras::devices() const {
 }
 
 void HyprExtras::refreshOptions() {
-    makeRequestJson("descriptions", [this](const QJsonDocument& response) {
+    if (!m_optionsRefresh.isNull()) {
+        m_optionsRefresh->close();
+    }
+
+    m_optionsRefresh = makeRequestJson("descriptions", [this](bool success, const QJsonDocument& response) {
+        m_optionsRefresh.reset();
+        if (!success) {
+            return;
+        }
+
         const auto options = response.array();
         bool dirty = false;
 
@@ -72,8 +81,15 @@ void HyprExtras::refreshOptions() {
 }
 
 void HyprExtras::refreshDevices() {
-    makeRequestJson("devices", [this](const QJsonDocument& response) {
-        m_devices->updateLastIpcObject(response.object());
+    if (!m_devicesRefresh.isNull()) {
+        m_devicesRefresh->close();
+    }
+
+    m_devicesRefresh = makeRequestJson("devices", [this](bool success, const QJsonDocument& response) {
+        m_devicesRefresh.reset();
+        if (success) {
+            m_devices->updateLastIpcObject(response.object());
+        }
     });
 }
 
@@ -97,36 +113,41 @@ void HyprExtras::handleEvent(const QString& event) {
     }
 }
 
-void HyprExtras::makeRequestJson(const QString& request, const std::function<void(QJsonDocument)> callback) {
-    makeRequest("j/" + request, [callback](const QByteArray& response) {
-        callback(QJsonDocument::fromJson(response));
+HyprExtras::SocketPtr HyprExtras::makeRequestJson(
+    const QString& request, const std::function<void(bool, QJsonDocument)>& callback) {
+    return makeRequest("j/" + request, [callback](bool success, const QByteArray& response) {
+        callback(success, QJsonDocument::fromJson(response));
     });
 }
 
-void HyprExtras::makeRequest(const QString& request, const std::function<void(QByteArray)> callback) {
+HyprExtras::SocketPtr HyprExtras::makeRequest(
+    const QString& request, const std::function<void(bool, QByteArray)>& callback) {
     if (m_requestSocket.isEmpty()) {
-        return;
+        return SocketPtr();
     }
 
-    auto* socket = new QLocalSocket(this);
+    auto socket = SocketPtr::create(this);
 
-    QObject::connect(socket, &QLocalSocket::connected, this, [=, this]() {
-        QObject::connect(socket, &QLocalSocket::readyRead, this, [socket, callback]() {
+    QObject::connect(socket.data(), &QLocalSocket::connected, this, [=, this]() {
+        QObject::connect(socket.data(), &QLocalSocket::readyRead, this, [socket, callback]() {
             const auto response = socket->readAll();
-            callback(std::move(response));
-            socket->deleteLater();
+            callback(true, std::move(response));
+            socket->close();
         });
 
         socket->write(request.toUtf8());
         socket->flush();
     });
 
-    QObject::connect(socket, &QLocalSocket::errorOccurred, this, [socket, request](QLocalSocket::LocalSocketError err) {
-        qWarning() << "HyprExtras::makeRequest: error making request: " << err << "request: " << request;
-        socket->deleteLater();
+    QObject::connect(socket.data(), &QLocalSocket::errorOccurred, this, [=](QLocalSocket::LocalSocketError err) {
+        qWarning() << "HyprExtras::makeRequest: error making request:" << err << "| request:" << request;
+        callback(false, {});
+        socket->close();
     });
 
     socket->connectToServer(m_requestSocket);
+
+    return socket;
 }
 
 } // namespace caelestia::internal::hypr
