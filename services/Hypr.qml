@@ -3,6 +3,7 @@ pragma Singleton
 import qs.components.misc
 import qs.config
 import Caelestia
+import Caelestia.Internal
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
@@ -20,11 +21,11 @@ Singleton {
     readonly property HyprlandMonitor focusedMonitor: Hyprland.focusedMonitor
     readonly property int activeWsId: focusedWorkspace?.id ?? 1
 
-    property var keyboard
+    readonly property HyprKeyboard keyboard: extras.keyboards.find(kb => kb.main) ?? null
     readonly property bool capsLock: keyboard?.capsLock ?? false
     readonly property bool numLock: keyboard?.numLock ?? false
     readonly property string defaultKbLayout: keyboard?.layout.split(",")[0] ?? "??"
-    readonly property string kbLayoutFull: keyboard?.active_keymap ?? "Unknown"
+    readonly property string kbLayoutFull: keyboard?.activeKeymap ?? "Unknown"
     readonly property string kbLayout: kbMap.get(kbLayoutFull) ?? "??"
     readonly property var kbMap: new Map()
 
@@ -70,7 +71,8 @@ Singleton {
                 root.configReloaded();
                 setDynamicConfsProc.running = true;
             } else if (n === "activelayout") {
-                devicesProc.running = true;
+                // devicesProc.running = true;
+                extras.reloadKeyboards();
             } else if (["workspace", "moveworkspace", "activespecial", "focusedmon"].includes(n)) {
                 Hyprland.refreshWorkspaces();
                 Hyprland.refreshMonitors();
@@ -104,15 +106,6 @@ Singleton {
         }
     }
 
-    Process {
-        id: devicesProc
-
-        running: true
-        command: ["hyprctl", "-j", "devices"]
-        stdout: StdioCollector {
-            onStreamFinished: root.keyboard = JSON.parse(text).keyboards.find(k => k.main)
-        }
-    }
 
     Process {
         id: setDynamicConfsProc
@@ -125,14 +118,18 @@ Singleton {
         target: "hypr"
 
         function reloadDevices(): void {
-            devicesProc.running = true;
+            extras.reloadKeyboards();
         }
     }
 
     CustomShortcut {
         name: "reloadDevices"
         description: "Reload devices"
-        onPressed: devicesProc.running = true
-        onReleased: devicesProc.running = true
+        onPressed: extras.reloadKeyboards()
+        onReleased: extras.reloadKeyboards()
+    }
+
+    HyprExtras {
+        id: extras
     }
 }

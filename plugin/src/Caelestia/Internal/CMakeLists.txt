@@ -8,3 +8,5 @@ qml_module(caelestia-internal
         Qt::Quick
         Qt::Concurrent
 )
+
+add_subdirectory(Hypr)
