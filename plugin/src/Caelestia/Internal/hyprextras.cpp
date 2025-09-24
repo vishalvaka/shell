@@ -50,6 +50,11 @@ HyprDevices* HyprExtras::devices() const {
     return m_devices;
 }
 
+void HyprExtras::message(const QString& message) {
+    makeRequest(message, [](bool, const QByteArray&) {
+    });
+}
+
 void HyprExtras::refreshOptions() {
     if (!m_optionsRefresh.isNull()) {
         m_optionsRefresh->close();
@@ -67,7 +72,7 @@ void HyprExtras::refreshOptions() {
         for (const auto& o : std::as_const(options)) {
             const auto obj = o.toObject();
             const auto key = obj.value("value").toString();
-            const auto value = obj.value("data").toObject().value("value").toVariant();
+            const auto value = obj.value("data").toObject().value("current").toVariant();
             if (m_options.value(key) != value) {
                 dirty = true;
                 m_options.insert(key, value);

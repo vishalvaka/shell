@@ -20,6 +20,8 @@ public:
     [[nodiscard]] QVariantHash options() const;
     [[nodiscard]] HyprDevices* devices() const;
 
+    Q_INVOKABLE void message(const QString& message);
+
     Q_INVOKABLE void refreshOptions();
     Q_INVOKABLE void refreshDevices();
 

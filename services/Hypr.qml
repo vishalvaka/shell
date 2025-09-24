@@ -29,7 +29,15 @@ Singleton {
     readonly property string kbLayout: kbMap.get(kbLayoutFull) ?? "??"
     readonly property var kbMap: new Map()
 
+    readonly property alias extras: extras
+    readonly property alias options: extras.options
+    readonly property alias devices: extras.devices
+
     signal configReloaded
+
+    function message(message: string): void {
+        extras.message(message);
+    }
 
     function dispatch(request: string): void {
         Hyprland.dispatch(request);
@@ -69,7 +77,7 @@ Singleton {
 
             if (n === "configreloaded") {
                 root.configReloaded();
-                setDynamicConfsProc.running = true;
+                extras.message("[[BATCH]]keyword bindln ,Caps_Lock,global,caelestia:refreshDevices;keyword bindln ,Num_Lock,global,caelestia:refreshDevices");
             } else if (["workspace", "moveworkspace", "activespecial", "focusedmon"].includes(n)) {
                 Hyprland.refreshWorkspaces();
                 Hyprland.refreshMonitors();
@@ -101,13 +109,6 @@ Singleton {
                     root.kbMap.set(match[2], match[1]);
             }
         }
-    }
-
-    Process {
-        id: setDynamicConfsProc
-
-        running: true
-        command: ["hyprctl", "--batch", "keyword bindln ,Caps_Lock,global,caelestia:refreshDevices;keyword bindln ,Num_Lock,global,caelestia:refreshDevices"]
     }
 
     IpcHandler {
