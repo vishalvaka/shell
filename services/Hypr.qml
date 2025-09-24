@@ -21,7 +21,7 @@ Singleton {
     readonly property HyprlandMonitor focusedMonitor: Hyprland.focusedMonitor
     readonly property int activeWsId: focusedWorkspace?.id ?? 1
 
-    readonly property HyprKeyboard keyboard: extras.keyboards.find(kb => kb.main) ?? null
+    readonly property HyprKeyboard keyboard: extras.devices.keyboards.find(kb => kb.main) ?? null
     readonly property bool capsLock: keyboard?.capsLock ?? false
     readonly property bool numLock: keyboard?.numLock ?? false
     readonly property string defaultKbLayout: keyboard?.layout.split(",")[0] ?? "??"
@@ -70,9 +70,6 @@ Singleton {
             if (n === "configreloaded") {
                 root.configReloaded();
                 setDynamicConfsProc.running = true;
-            } else if (n === "activelayout") {
-                // devicesProc.running = true;
-                extras.reloadKeyboards();
             } else if (["workspace", "moveworkspace", "activespecial", "focusedmon"].includes(n)) {
                 Hyprland.refreshWorkspaces();
                 Hyprland.refreshMonitors();
@@ -106,27 +103,26 @@ Singleton {
         }
     }
 
-
     Process {
         id: setDynamicConfsProc
 
         running: true
-        command: ["hyprctl", "--batch", "keyword bindln ,Caps_Lock,global,caelestia:reloadDevices;keyword bindln ,Num_Lock,global,caelestia:reloadDevices"]
+        command: ["hyprctl", "--batch", "keyword bindln ,Caps_Lock,global,caelestia:refreshDevices;keyword bindln ,Num_Lock,global,caelestia:refreshDevices"]
     }
 
     IpcHandler {
         target: "hypr"
 
-        function reloadDevices(): void {
-            extras.reloadKeyboards();
+        function refreshDevices(): void {
+            extras.refreshDevices();
         }
     }
 
     CustomShortcut {
-        name: "reloadDevices"
+        name: "refreshDevices"
         description: "Reload devices"
-        onPressed: extras.reloadKeyboards()
-        onReleased: extras.reloadKeyboards()
+        onPressed: extras.refreshDevices()
+        onReleased: extras.refreshDevices()
     }
 
     HyprExtras {

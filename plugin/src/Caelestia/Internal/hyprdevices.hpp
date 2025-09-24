@@ -1,19 +1,17 @@
 #pragma once
 
 #include <qjsonobject.h>
-#include <qlocalsocket.h>
 #include <qobject.h>
 #include <qqmlintegration.h>
-#include <qqmlpropertymap.h>
 
-namespace caelestia::internal {
+namespace caelestia::internal::hypr {
 
 class HyprKeyboard : public QObject {
     Q_OBJECT
     QML_ELEMENT
-    QML_UNCREATABLE("HyprKeyboard instances can only be retrieved from a HyprExtras")
+    QML_UNCREATABLE("HyprKeyboard instances can only be retrieved from a HyprDevices")
 
-    Q_PROPERTY(QVariantMap lastIpcObject READ lastIpcObject NOTIFY lastIpcObjectChanged)
+    Q_PROPERTY(QVariantHash lastIpcObject READ lastIpcObject NOTIFY lastIpcObjectChanged)
     Q_PROPERTY(QString address READ address NOTIFY addressChanged)
     Q_PROPERTY(QString name READ name NOTIFY nameChanged)
     Q_PROPERTY(QString layout READ layout NOTIFY layoutChanged)
@@ -25,7 +23,7 @@ class HyprKeyboard : public QObject {
 public:
     explicit HyprKeyboard(QJsonObject ipcObject, QObject* parent = nullptr);
 
-    [[nodiscard]] QVariantMap lastIpcObject() const;
+    [[nodiscard]] QVariantHash lastIpcObject() const;
     [[nodiscard]] QString address() const;
     [[nodiscard]] QString name() const;
     [[nodiscard]] QString layout() const;
@@ -34,7 +32,7 @@ public:
     [[nodiscard]] bool numLock() const;
     [[nodiscard]] bool main() const;
 
-    bool updateLastIpcObject(const QJsonObject& lastIpcObject);
+    bool updateLastIpcObject(const QJsonObject& object);
 
 signals:
     void lastIpcObjectChanged();
@@ -50,35 +48,25 @@ private:
     QJsonObject m_lastIpcObject;
 };
 
-class HyprExtras : public QObject {
+class HyprDevices : public QObject {
     Q_OBJECT
     QML_ELEMENT
+    QML_UNCREATABLE("HyprDevices instances can only be retrieved from a HyprExtras")
 
-    Q_PROPERTY(QQmlPropertyMap* options READ options CONSTANT)
     Q_PROPERTY(QList<HyprKeyboard*> keyboards READ keyboards NOTIFY keyboardsChanged)
 
 public:
-    explicit HyprExtras(QObject* parent = nullptr);
+    explicit HyprDevices(QObject* parent = nullptr);
 
-    [[nodiscard]] QQmlPropertyMap* options() const;
-    [[nodiscard]] QList<HyprKeyboard*> keyboards();
+    [[nodiscard]] QList<HyprKeyboard*> keyboards() const;
 
-    Q_INVOKABLE void refreshOptions();
-    Q_INVOKABLE void refreshKeyboards();
+    bool updateLastIpcObject(const QJsonObject& object);
 
 signals:
     void keyboardsChanged();
 
 private:
-    QString m_requestSocket;
-    QString m_eventSocket;
-    QLocalSocket* m_socket;
-
-    QQmlPropertyMap* m_options;
     QList<HyprKeyboard*> m_keyboards;
-
-    void makeRequestJson(const QString& request, const std::function<void(QJsonObject)> callback);
-    void makeRequest(const QString& request, const std::function<void(QByteArray)> callback);
 };
 
-} // namespace caelestia::internal
+} // namespace caelestia::internal::hypr

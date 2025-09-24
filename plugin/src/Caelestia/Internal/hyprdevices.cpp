@@ -1,13 +1,15 @@
 #include "hyprdevices.hpp"
 
+#include <qjsonarray.h>
+
 namespace caelestia::internal::hypr {
 
 HyprKeyboard::HyprKeyboard(QJsonObject ipcObject, QObject* parent)
     : QObject(parent)
     , m_lastIpcObject(ipcObject) {}
 
-QVariantMap HyprKeyboard::lastIpcObject() const {
-    return m_lastIpcObject.toVariantMap();
+QVariantHash HyprKeyboard::lastIpcObject() const {
+    return m_lastIpcObject.toVariantHash();
 }
 
 QString HyprKeyboard::address() const {
@@ -77,6 +79,50 @@ bool HyprKeyboard::updateLastIpcObject(const QJsonObject& object) {
         dirty = true;
         emit mainChanged();
     }
+    return dirty;
+}
+
+HyprDevices::HyprDevices(QObject* parent)
+    : QObject(parent) {}
+
+QList<HyprKeyboard*> HyprDevices::keyboards() const {
+    return m_keyboards;
+}
+
+bool HyprDevices::updateLastIpcObject(const QJsonObject& object) {
+    const auto val = object.value("keyboards").toArray();
+    bool dirty = false;
+
+    for (const auto& keyboard : std::as_const(m_keyboards)) {
+        if (std::find_if(val.begin(), val.end(), [keyboard](const QJsonValue& object) {
+                return object.toObject().value("address").toString() == keyboard->address();
+            }) == val.end()) {
+            dirty = true;
+            m_keyboards.removeAll(keyboard);
+            keyboard->deleteLater();
+        }
+    }
+
+    for (const auto& o : val) {
+        const auto obj = o.toObject();
+        const auto addr = obj.value("address").toString();
+
+        auto it = std::find_if(m_keyboards.begin(), m_keyboards.end(), [addr](const HyprKeyboard* keyboard) {
+            return keyboard->address() == addr;
+        });
+
+        if (it != m_keyboards.end()) {
+            dirty |= (*it)->updateLastIpcObject(obj);
+        } else {
+            dirty = true;
+            m_keyboards << new HyprKeyboard(obj, this);
+        }
+    }
+
+    if (dirty) {
+        emit keyboardsChanged();
+    }
+
     return dirty;
 }
 
